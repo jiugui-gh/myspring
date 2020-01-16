@@ -1,13 +1,18 @@
 package spring.demo.context;
 
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
+import spring.demo.annotation.GPAutowired;
+import spring.demo.annotation.GPController;
+import spring.demo.annotation.GPService;
 import spring.demo.beans.GPBeanWrapper;
 import spring.demo.beans.config.GPBeanDefinition;
+import spring.demo.beans.config.GPBeanPostProcessor;
 import spring.demo.beans.support.GPBeanDefinitionReader;
 import spring.demo.beans.support.GPDefaultListableBeanFactory;
 import spring.demo.core.GPBeanFactory;
@@ -94,7 +99,99 @@ public class GPApplicationContext extends GPDefaultListableBeanFactory implement
     public Object getBean(String beanName) throws Exception {
         // TODO Auto-generated method stub
         GPBeanDefinition beanDefinition = super.beanDefinitionMap.get(beanName);
+        
+        try {
+            //生成通知时间
+            GPBeanPostProcessor beanPostProcessor = new GPBeanPostProcessor();
+            
+            Object instance = instantiateBean(beanDefinition);
+            if(null == instance) {
+                return null;
+            }
+            
+            //在实例初始化以前调用一次
+            beanPostProcessor.postProcessBeforeInitialization(instance, beanName);
+            
+            GPBeanWrapper beanWrapper = new GPBeanWrapper(instance);
+            
+            this.factoryBeanInstanceCache.put(beanName, beanWrapper);
+            
+            //在实例初始化以后调用一次
+            beanPostProcessor.postProcessAfterInitialization(instance, beanName);
+            
+            populateBean(beanName,instance);
+            
+            // 通过这样调用，相当于给我们自己留了可操作的空间
+            return this.factoryBeanInstanceCache.get(beanName).getWrappedInstance();
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        
         return null;
+    }
+
+    private void populateBean(String beanName, Object instance) {
+        // TODO Auto-generated method stub
+        Class<?> clazz = instance.getClass();
+        
+        if(!(clazz.isAnnotationPresent(GPController.class) ||
+                clazz.isAnnotationPresent(GPService.class))) {
+            return ;
+        }
+        
+        Field[] fields = clazz.getFields();
+        
+        for(Field field : fields) {
+            if(!field.isAnnotationPresent(GPAutowired.class)) {
+                continue;
+            }
+            
+            GPAutowired autowired = field.getAnnotation(GPAutowired.class);
+            String autowiredBeanName = autowired.value().trim();
+            
+            if("".equals(autowiredBeanName)) {
+                autowiredBeanName = field.getType().getName();
+            }
+            
+            field.setAccessible(true);
+            
+            try {
+                field.set(instance, this.factoryBeanObjectCache.get(autowiredBeanName));
+            } catch (IllegalArgumentException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (IllegalAccessException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private Object instantiateBean(GPBeanDefinition beanDefinition) {
+        // TODO Auto-generated method stub
+        Object instance = null;
+        String className = beanDefinition.getBeanClassName();
+        
+        try {
+            //因为根据Class才能确定一个类是否有实例
+            if(this.factoryBeanObjectCache.containsKey(className)) {
+                instance = this.factoryBeanObjectCache.get(className);
+            }else {
+                Class<?> clazz = Class.forName(className);
+                instance = clazz.newInstance();
+                
+                this.factoryBeanObjectCache.put(beanDefinition.getFactoryBeanName(), instance);
+            }
+            
+            return instance;
+            
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return null;
+        
     }
 
     @Override
