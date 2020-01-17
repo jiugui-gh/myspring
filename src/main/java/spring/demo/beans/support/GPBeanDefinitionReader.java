@@ -28,7 +28,7 @@ public class GPBeanDefinitionReader {
     
     public GPBeanDefinitionReader(String... locations) {
         // 通过URL定位找到其锁对应的文件,然后转换为文件流
-        InputStream is = this.getClass().getClassLoader().getResourceAsStream(locations[0].replace("classpath", ""));
+        InputStream is = this.getClass().getClassLoader().getResourceAsStream(locations[0].replace("classpath:", ""));
         try {
             config.load(is);
         } catch (IOException e) {
@@ -50,7 +50,7 @@ public class GPBeanDefinitionReader {
 
     private void doScanner(String scanPackage) {
         // TODO Auto-generated method stub
-        File classPath = new File(this.getClass().getClassLoader().getResource("/" + scanPackage.replace("\\.", "/")).getFile());
+        File classPath = new File(this.getClass().getClassLoader().getResource("/" + scanPackage.replaceAll("\\.", "/")).getFile());
         
         for(File file : classPath.listFiles()) {
             if(file.isDirectory()) {
@@ -108,4 +108,12 @@ public class GPBeanDefinitionReader {
         chars[0] += 32;
         return String.valueOf(chars);
     }
+    
+   /* public static void main(String[] args) {
+        String scanPackage = "spring.demo";
+        System.out.println(scanPackage.replaceAll("\\.", "/"));
+        System.out.println(GPBeanDefinitionReader.class.getClassLoader().getResource(""));
+        System.out.println(GPBeanDefinitionReader.class.getClassLoader().getResource("/" + scanPackage.replace("\\.", "/")));
+        File classPath = new File(GPBeanDefinitionReader.class.getClassLoader().getResource(scanPackage.replace("\\.", "/")).getFile());
+    }*/
 }

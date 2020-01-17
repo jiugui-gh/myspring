@@ -13,24 +13,30 @@ import java.util.Locale;
  */
 public class GPViewResolver {
 
-    private final String DEFAULT_TEMPLATE_SUFFIX = ".html";
+//    private final String DEFAULT_TEMPLATE_SUFFIX = ".html";
     private File templateRootDir;
     private String viewName;
     
-    public GPViewResolver(String templateRoot) {
-        String templateRootPath = this.getClass().getClassLoader().getResource(templateRoot).getFile();
+    public GPViewResolver(String templateRoot,String viewName) {
+        String templateRootPath = this.getClass().getClassLoader().getResource(templateRoot + "/" + viewName).getFile();
         this.templateRootDir = new File(templateRootPath);
+        this.viewName = viewName;
     }
     
     public GPView resolveViewName(String viewName,Locale locale) throws Exception{
         
-        this.viewName = viewName;
+        // this.viewName = viewName;
         if(null == this.viewName || "".equals(this.viewName.trim())) {
             return null;
         }
-        this.viewName = this.viewName.endsWith(DEFAULT_TEMPLATE_SUFFIX) ? this.viewName : (this.viewName + DEFAULT_TEMPLATE_SUFFIX);
         
-        File templateFile = new File((templateRootDir.getPath() + "/" + this.viewName).replaceAll("/+", "."));
+        if(!viewName.equals(this.viewName) && !viewName.equals(this.viewName.replace(".html", ""))) {
+            return null;
+        }
+        
+        //this.viewName = this.viewName.endsWith(DEFAULT_TEMPLATE_SUFFIX) ? this.viewName : (this.viewName + DEFAULT_TEMPLATE_SUFFIX);
+        
+        File templateFile = new File((templateRootDir.getPath()).replaceAll("/+", "."));
         
         return new GPView(templateFile);
     }

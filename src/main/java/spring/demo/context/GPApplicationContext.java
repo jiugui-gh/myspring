@@ -34,7 +34,7 @@ public class GPApplicationContext extends GPDefaultListableBeanFactory implement
     // 通用的Ioc容器
     private Map<String,GPBeanWrapper> factoryBeanInstanceCache = new ConcurrentHashMap<String,GPBeanWrapper>();
     
-    public GPApplicationContext(String... configLocations) {
+     public GPApplicationContext(String... configLocations) {
         this.configLocations = configLocations;
         
         try {
@@ -140,7 +140,7 @@ public class GPApplicationContext extends GPDefaultListableBeanFactory implement
             return ;
         }
         
-        Field[] fields = clazz.getFields();
+        Field[] fields = clazz.getDeclaredFields();
         
         for(Field field : fields) {
             if(!field.isAnnotationPresent(GPAutowired.class)) {
@@ -179,8 +179,12 @@ public class GPApplicationContext extends GPDefaultListableBeanFactory implement
                 instance = this.factoryBeanObjectCache.get(className);
             }else {
                 Class<?> clazz = Class.forName(className);
-                instance = clazz.newInstance();
                 
+                if(!(clazz.isAnnotationPresent(GPService.class) || clazz.isAnnotationPresent(GPController.class))) {
+                    return null;
+                }
+                instance = clazz.newInstance();
+                //this.factoryBeanObjectCache.put(beanDefinition.getBeanClassName(), instance);
                 this.factoryBeanObjectCache.put(beanDefinition.getFactoryBeanName(), instance);
             }
             

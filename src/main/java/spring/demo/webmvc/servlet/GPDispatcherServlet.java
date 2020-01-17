@@ -116,6 +116,9 @@ public class GPDispatcherServlet extends HttpServlet {
                 // 到了MVC层，对外提供的方法只有一个getBean();
                 // 返回的对象不是BeanWrapper,怎么办？
                 Object controller = context.getBean(beanName);
+                if(controller == null) {
+                    continue;
+                }
                 //Object controller = GPAopUtils.getTargetObject(proxy);
                 Class<?> clazz = controller.getClass();
                 if(!clazz.isAnnotationPresent(GPController.class)) {
@@ -161,12 +164,13 @@ public class GPDispatcherServlet extends HttpServlet {
         // 在页面输入http://localhost/first.html
         // 解决页面名字和模板文件关联问题
         String templateRoot = context.getConfig().getProperty("templateRoot");
-        String templateRootPath = this.getClass().getClassLoader().getResource(templateRoot).getFile();
+        String templateRootPath = GPDispatcherServlet.class.getClassLoader().getResource(templateRoot).getFile();
         
         File templateRootDir = new File(templateRootPath);
         
         for(File template : templateRootDir.listFiles()) {
-            this.viewResolvers.add(new GPViewResolver(templateRoot));//?
+           // this.viewResolvers.add(new GPViewResolver(templateRootDir.getAbsolutePath() + "\\" +template.getName(),template.getName()));//?
+            this.viewResolvers.add(new GPViewResolver(templateRoot,template.getName()));//?
         }
     }
     /**
@@ -197,7 +201,29 @@ public class GPDispatcherServlet extends HttpServlet {
         GPHandlerMapping handler = getHandler(req);
         if(handler == null) {
             processDispatchResult(req,resp,new GPModelAndView("404"));
+            return ;
         }
+        
+        GPHandlerAdapter ha = getHandlerAdapter(handler);
+        
+        // 这一步只是调用方法，得到返回值
+        GPModelAndView mv = ha.handle(req, resp, handler);
+        
+        // 这一步才是真的输出
+        processDispatchResult(req,resp,mv);
+    }
+
+    private GPHandlerAdapter getHandlerAdapter(GPHandlerMapping handler) {
+        // TODO Auto-generated method stub
+        if(this.handlerAdapters.isEmpty()) {
+            return null;
+        }
+        
+        GPHandlerAdapter ha = this.handlerAdapters.get(handler);
+        if(ha.supports(handler)) {
+            return ha;
+        }
+        return null;
     }
 
     private void processDispatchResult(HttpServletRequest req, HttpServletResponse resp,
@@ -245,5 +271,7 @@ public class GPDispatcherServlet extends HttpServlet {
         
         return null;
     }
-
+    public static void main(String[] args) {
+        System.out.println(GPDispatcherServlet.class.getClassLoader().getResource("").getFile());
+    }
 }
